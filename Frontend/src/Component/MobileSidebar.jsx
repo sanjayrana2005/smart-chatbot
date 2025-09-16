@@ -16,7 +16,7 @@ const MobileSidebar = ({ sidebarOpen, onClose, history, handleDeleteHistory, set
             <ul className="space-y-1 text-left overflow-auto px-1">
                 {
                     history && history.map((item, index) => (
-                        <div index={index} className='flex items-center gap-1 justify-between hover:bg-zinc-600 px-1 rounded-sm'>
+                        <div key={index} className='flex items-center gap-1 justify-between hover:bg-zinc-600 px-1 rounded-sm'>
                             <li onClick={() => {
                                 setSelectedHistory(item)
                                 onClose()

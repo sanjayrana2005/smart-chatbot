@@ -101,6 +101,17 @@ function App() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       setLoading(false);
+
+      setMessages(prev => {
+        if (prev.length === 0) return prev;
+        const updated = [...prev];
+        // find the last answer placeholder
+        const lastIndex = updated.findIndex((m, i) => i === updated.length - 1 && m.type === 'a' && m.loading);
+        if (lastIndex !== -1) {
+          updated[lastIndex] = { ...updated[lastIndex], loading: false, text: 'Request cancelled' };
+        }
+        return updated;
+      });
     }
   }
 
@@ -120,15 +131,9 @@ function App() {
   }, [selectedHistory])
 
   return (
-
     <div className="grid md:grid-cols-5 text-center gap-1">
 
       <div className="absolute text-gray-300 font-extrabold inline p-2">Smart-Bot</div>
-
-      <select className="md:hidden text-white fixed bottom-20">
-        <option value="">Dark</option>
-        <option value="">Light</option>
-      </select>
 
       {/* // mobile menu */}
       <Menu onClick={() => setSidebarOpen(true)} className="text-white cursor-pointer md:hidden relative top-3 ml-auto right-3" />
@@ -201,7 +206,6 @@ function App() {
                   type="submit"
                   disabled={!question}
                   className="hover:cursor-pointer bg-zinc-200 hover:bg-neutral-600 hover:text-white text-black rounded-full w-9 h-8 flex items-center justify-center " onClick={handleAskQuestion}><FaArrowUp /></button>)
-
             }
           </form>
         </div>
