@@ -18,6 +18,9 @@ function App() {
   const abortControllerRef = useRef(null);
 
   const handleAskQuestion = async () => {
+    const trimmedQuestion = question.trim();
+    if (!trimmedQuestion) return;
+    
     if (localStorage.getItem("history")) {
       let history = JSON.parse(localStorage.getItem("history"))
       history = [question, ...history]
@@ -27,7 +30,7 @@ function App() {
       localStorage.setItem("history", JSON.stringify([question]))
       setRecentHistory([question])
     }
-    setQuestion("");
+   
     // clean any previous result
     setMessages(prev => [
       ...prev,
@@ -54,7 +57,7 @@ function App() {
           signal: controller.signal, // this only works on axios >=1.2.0
         }
       );
-
+ setQuestion("");
       let dataString = response.data.candidates[0].content.parts[0].text
       dataString = dataString.split("* ")
       dataString = dataString.map((item) => item.trim())
@@ -89,6 +92,12 @@ function App() {
     }
   }
 
+  const handleDeleteHistory = (indexToDelete) => {
+    const updatedHistory = recentHistory.filter((_, index) => index !== indexToDelete)
+    setRecentHistory(updatedHistory)
+    localStorage.setItem("history", JSON.stringify(updatedHistory));
+  }
+
   useEffect(() => {
     const saved = JSON.parse(localStorage.getItem("history")) || []
     setRecentHistory(saved)
@@ -96,16 +105,16 @@ function App() {
 
   return (
 
-    <div className="grid grid-cols-5 text-center">
-      {/* // Left Sidebar */}
-      <div className="col-span-1 bg-zinc-800 pt-15">
+    <div className="grid md:grid-cols-5 text-center">
+      {/* // Left Sidebar for medium screen and above*/}
+      <div className="md:col-span-1 bg-zinc-800 pt-15 hidden md:block">
         <h1 className="text-xl text-white font-semibold">Recent Search</h1>
-        <ul className="text-left px-2 overflow-auto">
+        <ul className="text-left overflow-auto px-1">
           {
-            recentHistory && recentHistory.map((item) => (
-              <div className="flex items-center gap-3 justify-between">
-                <li className="text-zinc-400 text-ellipsis line-clamp-1">{item}</li>
-                <Trash size={15} className="text-zinc-400 hover:cursor-pointer hover:text-zinc-300" />
+            recentHistory && recentHistory.map((item, index) => (
+              <div key={index} className="flex items-center gap-1 justify-between hover:bg-zinc-600 px-1 rounded-sm">
+                <li className="text-zinc-400 text-ellipsis line-clamp-1 w-full hover:cursor-pointer hover:text-zinc-300">{item}</li>
+                <Trash onClick={() => handleDeleteHistory(index)} size={15} className="text-zinc-400 hover:cursor-pointer hover:text-zinc-300" />
               </div>
             ))
           }
@@ -113,7 +122,7 @@ function App() {
       </div>
 
       {/* right Sidebar */}
-      <div className="col-span-4 flex flex-col p-8 h-screen">
+      <div className="grid-cols-5 md:col-span-4 flex flex-col p-8 h-screen">
         <div className="container text-white flex-1 overflow-y-auto hide-scrollbar py-3 rounded-md">
           <ul>
             {messages.map((item, index) => (
