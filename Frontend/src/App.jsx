@@ -3,8 +3,9 @@ import { FaArrowUp } from "react-icons/fa6";
 import { FaSquare } from "react-icons/fa";
 import axios from "axios"
 import url from "./constant.js"
-import { Loader, Trash } from "lucide-react"
+import { Loader, Trash, Menu } from "lucide-react"
 import Answer from "./Component/Answer.jsx";
+import MobileSidebar from "./Component/MobileSidebar.jsx";
 
 
 function App() {
@@ -12,6 +13,9 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false)
   const [recentHistory, setRecentHistory] = useState()
+  const [selectedHistory, setSelectedHistory] = useState()
+  const scrollToAnswer = useRef()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
 
@@ -19,22 +23,25 @@ function App() {
 
   const handleAskQuestion = async () => {
     const trimmedQuestion = question.trim();
-    if (!trimmedQuestion) return;
-    
-    if (localStorage.getItem("history")) {
-      let history = JSON.parse(localStorage.getItem("history"))
-      history = [question, ...history]
-      localStorage.setItem("history", JSON.stringify(history))
-      setRecentHistory(history)
-    } else {
-      localStorage.setItem("history", JSON.stringify([question]))
-      setRecentHistory([question])
+    if (!trimmedQuestion && !selectedHistory) return;
+
+    if (trimmedQuestion) {
+      if (localStorage.getItem("history")) {
+        let history = JSON.parse(localStorage.getItem("history"))
+        history = [question, ...history]
+        localStorage.setItem("history", JSON.stringify(history))
+        setRecentHistory(history)
+      } else {
+        localStorage.setItem("history", JSON.stringify([question]))
+        setRecentHistory([question])
+      }
     }
-   
+
+
     // clean any previous result
     setMessages(prev => [
       ...prev,
-      { type: "q", text: question },
+      { type: "q", text: question ? question : selectedHistory },
       { type: "a", text: "", loading: true } // placeholder answer
     ]);
 
@@ -44,12 +51,13 @@ function App() {
     setLoading(true);
 
     try {
+      const payloadData = question ? question : selectedHistory
       const response = await axios.post(
         url + GEMINI_API_KEY,
         {
           contents: [
             {
-              parts: [{ text: question }],
+              parts: [{ text: payloadData }],
             },
           ],
         },
@@ -57,7 +65,11 @@ function App() {
           signal: controller.signal, // this only works on axios >=1.2.0
         }
       );
- setQuestion("");
+      setQuestion("");
+      setTimeout(() => {
+        scrollToAnswer.current.scrollTop = scrollToAnswer.current.scrollHeight
+      }, 400);
+
       let dataString = response.data.candidates[0].content.parts[0].text
       dataString = dataString.split("* ")
       dataString = dataString.map((item) => item.trim())
@@ -103,9 +115,26 @@ function App() {
     setRecentHistory(saved)
   }, [])
 
+  useEffect(() => {
+    handleAskQuestion()
+  }, [selectedHistory])
+
   return (
 
-    <div className="grid md:grid-cols-5 text-center">
+    <div className="grid md:grid-cols-5 text-center gap-1">
+
+      <div className="absolute text-gray-300 font-extrabold inline p-2">Smart-Bot</div>
+
+      <select className="md:hidden text-white fixed bottom-20">
+        <option value="">Dark</option>
+        <option value="">Light</option>
+      </select>
+
+      {/* // mobile menu */}
+      <Menu onClick={() => setSidebarOpen(true)} className="text-white cursor-pointer md:hidden relative top-3 ml-auto right-3" />
+
+      <MobileSidebar sidebarOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} history={recentHistory} setSelectedHistory={setSelectedHistory} handleDeleteHistory={handleDeleteHistory} />
+
       {/* // Left Sidebar for medium screen and above*/}
       <div className="md:col-span-1 bg-zinc-800 pt-15 hidden md:block">
         <h1 className="text-xl text-white font-semibold">Recent Search</h1>
@@ -113,7 +142,7 @@ function App() {
           {
             recentHistory && recentHistory.map((item, index) => (
               <div key={index} className="flex items-center gap-1 justify-between hover:bg-zinc-600 px-1 rounded-sm">
-                <li className="text-zinc-400 text-ellipsis line-clamp-1 w-full hover:cursor-pointer hover:text-zinc-300">{item}</li>
+                <li onClick={() => setSelectedHistory(item)} className="text-zinc-400 text-ellipsis line-clamp-1 w-full hover:cursor-pointer hover:text-zinc-300">{item}</li>
                 <Trash onClick={() => handleDeleteHistory(index)} size={15} className="text-zinc-400 hover:cursor-pointer hover:text-zinc-300" />
               </div>
             ))
@@ -121,9 +150,10 @@ function App() {
         </ul>
       </div>
 
-      {/* right Sidebar */}
-      <div className="grid-cols-5 md:col-span-4 flex flex-col p-8 h-screen">
-        <div className="container text-white flex-1 overflow-y-auto hide-scrollbar py-3 rounded-md">
+      {/* right part */}
+      <div className="grid-cols-5 md:col-span-4 flex flex-col p-8 h-screen ">
+        <h1 className="text-xl sm:text-3xl bg-clip-text text-transparent bg-gradient-to-r from-pink-700 to-violet-700 font-semibold mb-1">Hello user, Ask me Anything </h1>
+        <div ref={scrollToAnswer} className="container text-white flex-1 overflow-y-auto hide-scrollbar py-3 rounded-md">
           <ul>
             {messages.map((item, index) => (
               <div key={index} className={item.type === "q" ? "flex justify-end" : ""}>
